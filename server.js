@@ -1,6 +1,7 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var _ = require('underscore');
+var db = require('./db.js')
 
 var app = express();
 var PORT = process.env.PORT || 3000;
@@ -67,19 +68,44 @@ app.get('/todos/:id', function(req, res) {
 
 app.post('/todos', function(req, res) {
 	var body = _.pick(req.body, 'description', 'completed');
-	//req.body;
-
 	if (!_.isBoolean(body.completed) || !_.isString(body.description) || body.description.trim().length == 0) {
-		return res.status(400).send();
+		return res.status(400).json({
+			"error": "Your todo is bad format son"
+		});
+	} else {
+		db.Todo.create({
+			description: body.description,
+			completed: body.completed
+		}).then(function(){
+			return Todo.findById(1)
+		}).then(function(todo) {
+			if (todo) {
+				res.status(200).json(todo) 
+			} else {
+				res.status(400).json({
+					"error": "No todo created"
+				})
+			}
+		})
 	}
 
-	body.description = body.description.trim();
-	body.id = todoNextId;
-	todoNextId++;
-	todos.push(body);
+	//call db.todo.create
+	//iff success respond with 200 and todo
+	// if fail pass error send res.status(400).json(e)
 
-	//console.log('description ' + body.description);
-	res.json(body);
+	//req.body;
+
+	// if (!_.isBoolean(body.completed) || !_.isString(body.description) || body.description.trim().length == 0) {
+	// 	return res.status(400).send();
+	// }
+
+	// body.description = body.description.trim();
+	// body.id = todoNextId;
+	// todoNextId++;
+	// todos.push(body);
+
+	// //console.log('description ' + body.description);
+	// res.json(body);
 });
 
 app.delete('/todos/:id', function(req, res) {
@@ -134,8 +160,8 @@ app.put('/todos/:id', function(req, res) {
 
 });
 
-
-
-app.listen(PORT, function() {
-	console.log('Express listening on port ' + PORT + '!');
-});
+db.sequelize.sync().then(function() {
+	app.listen(PORT, function() {
+		console.log('Express listening on port ' + PORT + '!');
+	});
+})
